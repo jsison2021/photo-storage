@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Storage</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body class="body">
+    <h1 class="title">Photo Storage</h1>
+    <div class="container">
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/png, image/jpeg">
+            <br>
+            <input class="submitButton" type="submit" value="Upload">
+            <label class="disclaimer">Files accepted: *.jpg, *.jpeg, *.png</label>
+        </form>
+
+        <div class="imgContainer">
+            {% if files %}
+                <div class="imgGrid">
+                    {% for file in files %}
+                        <div class="img">
+                            <div class="imageHeader">
+                                
+                                    <p class="imgTitle">{{file.name}}</p>
+                               
+                            </div>
+                            <a href="{{ file.url }}">
+                                <img src="/image_preview/{{ file.name }}" alt="{{ file.name }}">
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class = "noPhotos">You have no photos. Start uploading!</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
