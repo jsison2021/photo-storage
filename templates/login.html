@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+        <!-- Firebase App (required for all Firebase products) -->
+        <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+        <!-- Firebase Authentication (for user authentication) -->
+        <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    
+        <script>
+            fetch('/firebase-config')
+                .then(response => response.json())
+                .then(firebaseConfig => {
+                    // Initialize Firebase
+                    firebase.initializeApp(firebaseConfig);
+                })
+            .catch(error => console.error("Error loading Firebase config:", error));
+    
+            // Handle user login and pass the token to Flask server
+            function login() {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebase.auth().signInWithPopup(provider)
+                    .then((result) => {
+                        result.user.getIdToken().then((token) => {
+                            // Send token to Flask server
+                            fetch('/login', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ token: token }) // Send token in the request body
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    // Successfully logged in
+                                    window.location.href = '/'; // Redirect to index page
+                                } else {
+                                    // Handle login error
+                                    console.error('Login failed:', response);
+                                }
+                            })
+                            .catch(error => console.error('Error sending token to backend:', error));
+                        });
+                    })
+                    .catch(error => console.error('Error during sign-in:', error));
+            }
+        </script>
+    </head>
+<body class="body">
+    <div class = "header-container">
+        <h1 class="title">Photo Storage</h1>
+    </div>
+    <div class="login-container">
+        <div class = "login-button-container">
+            <button class="google-sign-in" onclick="login()">
+                <i class="fab fa-google google-icon"></i>
+                Sign In with Google
+            </button>
+        </div>
+    </div>
+</div>
+
+    
+    
+</body>
+</html>

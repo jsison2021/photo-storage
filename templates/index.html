@@ -6,16 +6,72 @@
     <title>Photo Storage</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- Firebase App (required for all Firebase products) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <!-- Firebase Authentication (for user authentication) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+
+    <script>
+        fetch('/firebase-config')
+            .then(response => response.json())
+            .then(firebaseConfig => {
+                // Initialize Firebase
+                firebase.initializeApp(firebaseConfig);
+            })
+        .catch(error => console.error("Error loading Firebase config:", error));
+
+        function logout() {
+            firebase.auth().signOut().then(() => {
+                // Redirect to the login page
+                window.location.href = "/login";  // Change this to the correct login URL if necessary
+            }).catch((error) => {
+                console.error("Sign out error: ", error);
+            });
+        }
+
+    </script>
+
 </head>
 <body class="body">
-    <h1 class="title">Photo Storage</h1>
+    
+    <div class="header-container">
+        <h1 class="title">Photo Storage</h1>
+        
+        <div class="profile-dropdown">
+            <button class="profile-button">
+                <img src="{{ picture }}" alt="{{ name }} profile picture" class="profile-picture">
+            </button>
+            <div class="dropdown-content" id="dropdown-content">
+                <img src="{{ picture }}" alt="{{ name }} profile picture">
+                <p>Hi, {{ name }}</p>
+                <button onclick="logout()">Sign Out</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="container">
-        <form action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept="image/png, image/jpeg">
-            <br>
+        <form action="/upload" method="POST" enctype="multipart/form-data" id="upload-form">
+            <div class="file-drop-area" id="file-drop-area">
+                <p>Drag and drop files here or click to select</p>
+                <label class="disclaimer">Files accepted: *.jpg, *.jpeg, *.png</label>
+                <input type="file" name="files" id="file-input" accept="image/png, image/jpeg" multiple hidden>
+                
+            </div>
+            <ul class="file-list" id="file-list"></ul>
+            
             <input class="submitButton" type="submit" value="Upload">
-            <label class="disclaimer">Files accepted: *.jpg, *.jpeg, *.png</label>
         </form>
+
+        <div class="progress-container" id="progress-container" style="display: none;">
+            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+        </div>
+        
+        {% if upload_status %}
+        <p class="{% if upload_status == 'Successfully uploaded!' %}success{% elif upload_status in ['Failed to upload.', 'File already exists!','No files uploaded.'] %}error{% endif %}">
+            {{ upload_status }}
+        </p> <!-- Display the upload status with conditional classes -->
+        
+        {% endif %}
 
         <div class="imgContainer">
             {% if files %}
@@ -27,8 +83,8 @@
                                     <p class="imgTitle">{{file.name}}</p>
                                
                             </div>
-                            <a href="{{ file.url }}">
-                                <img src="/image_preview/{{ file.name }}" alt="{{ file.name }}">
+                            <a href="{{ url_for('view_image', uid=uid, filename=file.name) }}">
+                                <img src="{{ url_for('image_preview', uid=uid, filename=file.name) }}" alt="{{ file.name }}">
                             </a>
                         </div>
                     {% endfor %}
@@ -38,5 +94,128 @@
             {% endif %}
         </div>
     </div>
+    
 </body>
+
+<script>
+    /* Dropdown */
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelector('.profile-button').addEventListener('click', function(event) {
+            const dropdown = document.getElementById('dropdown-content');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            event.stopPropagation();
+        });
+
+        window.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('dropdown-content');
+            if (!event.target.closest('.profile-dropdown')) {
+                dropdown.style.display = 'none';
+            }
+        });
+    });
+
+    /* File Logic */
+    /* File Logic */
+    const fileDropArea = document.getElementById('file-drop-area');
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+    const dataTransfer = new DataTransfer(); // Holds all files
+
+    fileDropArea.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        fileDropArea.classList.add('drag-over');
+    });
+
+    fileDropArea.addEventListener('dragleave', () => {
+        fileDropArea.classList.remove('drag-over');
+    });
+
+    fileDropArea.addEventListener('drop', (event) => {
+        event.preventDefault();
+        fileDropArea.classList.remove('drag-over');
+        const files = Array.from(event.dataTransfer.files);
+        handleFiles(files);
+    });
+
+    fileDropArea.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        const files = Array.from(fileInput.files);
+        handleFiles(files);
+    });
+
+    function handleFiles(files) {
+        files.forEach((file) => {
+            if (file.type === 'image/jpeg' || file.type === 'image/png') {
+                if (!Array.from(dataTransfer.files).includes(file)) { // Prevent duplicates
+                    const listItem = document.createElement('li');
+                    listItem.textContent = file.name;
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'X';
+                    deleteButton.classList.add('delete-btn');
+                    deleteButton.onclick = () => removeFile(file, listItem);
+
+                    listItem.appendChild(deleteButton);
+                    fileList.appendChild(listItem);
+                    dataTransfer.items.add(file);  // Add file to DataTransfer
+                }
+            }
+        });
+        fileInput.files = dataTransfer.files; // Update the file input
+    }
+
+    function removeFile(file, listItem) {
+        const index = Array.from(dataTransfer.files).indexOf(file);
+        if (index > -1) {
+            dataTransfer.items.remove(index);  // Remove file from DataTransfer
+            fileInput.files = dataTransfer.files;  // Update file input
+            fileList.removeChild(listItem);  // Remove list item
+        }
+    }
+    document.getElementById('upload-form').addEventListener('submit', function(event) {
+        event.preventDefault();  // Prevent the default form submission
+
+        const formData = new FormData(this);
+        const xhr = new XMLHttpRequest();
+
+        // Show progress bar
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        progressContainer.style.display = 'block';
+
+        xhr.open('POST', '/upload', true);
+
+        // Update progress bar on progress event
+        xhr.upload.addEventListener('progress', function(event) {
+            if (event.lengthComputable) {
+                const percentComplete = (event.loaded / event.total) * 100;
+                progressBar.style.width = percentComplete + '%';
+            }
+        });
+
+        // Handle response
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                // Hide progress bar and reset
+                progressBar.style.width = '0%';
+                progressContainer.style.display = 'none';
+                // Optionally, you can show success or error messages here
+                // You might also want to refresh the file list here
+                // For example, you can reload the page to update the displayed files
+                window.location.reload(); // Reload the page to see new uploads
+            } else {
+                console.error("Upload failed:", xhr.responseText);
+                // Optionally hide the progress bar and show an error message
+                progressContainer.style.display = 'none';
+            }
+        };
+
+        // Send the form data
+        xhr.send(formData);
+    });
+
+
+</script>
+
 </html>

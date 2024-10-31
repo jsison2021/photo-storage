@@ -9,110 +9,248 @@ body,html {
     text-align: center;
     padding: 20px;
 }
-/* Index.html */
-/* Images */
-.imgContainer{
-   margin: 20px;
-}
-
-.imageHeader{
-    height: 50px;
-    padding: 0px;
-    width: 250px;
-    background-color: lightblue; 
-    border: 4px solid lightblue;
-    text-align: left;
-}
-
-.imgTitle{
-    color: #000000;
-    width: 200px;
-    font-weight: bold;
-    text-align: left;
-    margin-left: 5px;
-    background-color: lightblue;
-    border: 4px solid lightblue;
-    display: inline-block;
-}
-
-.imgGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 250px); 
-    grid-auto-rows: 200px; 
-    gap: 85px; 
-    justify-content: center; 
-}
-
-.imgGrid a {
-    width: 250px;
-    height: 200px;
-}
-
-.imgGrid img {
-    margin-bottom: 50px;
-    border: 4px solid lightblue;
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: 100%;
-    height: 100%;
-    object-fit: cover; 
-    
+}
+/* Login.html */
+.login-button-container{
+    margin-top: 50px;
+}
+.google-sign-in {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: lightblue; /* Google blue */
+    color: #000000;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Text */
+.google-sign-in:hover {
+    background-color: #357ae8; /* Slightly darker blue on hover */
+}
+
+.google-sign-in:focus {
+    outline: none;
+}
+
+.google-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+/* Index.html */
+
+/* Header */
+.header-container {
+    display: flex;
+    background-color: lightblue;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .title{
     margin: 0; 
     font-size: 20px;
     text-align: left;
     font-weight: bold;
-    background-color: lightblue;
     padding: 25px;
 }
 
+.profile-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.profile-picture {
+    height: 40px; /* Adjust size as needed */
+    width: 40px;  /* Adjust size as needed */
+    border-radius: 50%; /* Makes it circular */
+    padding: 25px;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 2%; 
+    top: 70px; /* Position it below the image */
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    padding: 10px;
+    min-width: 160px;
+    text-align: center;
+    z-index: 1;
+}
+
+.dropdown-content p {
+    margin: 0;
+    padding: 8px 0;
+}
+
+.dropdown-content img {
+    height: 40px; 
+    width: 40px;  /* Adjust size as needed */
+    border-radius: 50%; /* Makes it circular */
+    padding: 10px;
+}
+
+.dropdown-content button {
+    width: 100%;
+    padding: 8px 0;
+    border: none;
+    background: lightblue;
+    color: #000000;
+    cursor: pointer;
+}
+
+.dropdown-content button:hover {
+    background: #0056b3;
+}
+
+/* Delete button styles */
+.delete-btn {
+    background: none;
+    color: red; /* White text */
+    border: #000000; /* No border */
+    border-radius: 4px; /* Rounded corners */
+    padding: 5px 10px; /* Padding for button */
+    margin-left: 10px; /* Space between file name and button */
+    cursor: pointer; /* Pointer cursor on hover */
+    font-size: 12px; /* Smaller font size */
+}
+
+
+/* Images */
+.imgContainer{
+    margin: 20px;
+ }
+ 
+ .imageHeader{
+     height: 50px;
+     padding: 0px;
+     width: 250px;
+     background-color: lightblue; 
+     border: 4px solid lightblue;
+     text-align: left;
+ }
+ 
+ .imgTitle{
+     color: #000000;
+     width: 200px;
+     font-weight: bold;
+     text-align: left;
+     margin-left: 5px;
+     background-color: lightblue;
+     border: 4px solid lightblue;
+     display: inline-block;
+ }
+ 
+ .imgGrid {
+     display: grid;
+     grid-template-columns: repeat(auto-fill, 250px); 
+     grid-auto-rows: 200px; 
+     gap: 85px; 
+     justify-content: center; 
+ }
+ 
+ .imgGrid a {
+     width: 250px;
+     height: 200px;
+ }
+ 
+ .imgGrid img {
+     margin-bottom: 50px;
+     border: 4px solid lightblue;
+     width: 100%;
+     height: 100%;
+     object-fit: cover; 
+     
+ }
+
+/* Text */
 .disclaimer{
     font-size: 16px;
     margin-top: 20px;
+    font-weight: bold;
     display: block;
 }
 
-input[type="file"]::file-selector-button {
-    color: black;
+/* File form*/
+/* Styling for the drop area */
+.file-drop-area {
+    border: 2px dashed #888;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    background-color: #f9f9f9;
+    color: #555;
+    width: 50%; /* Keep this or adjust as needed */
+    margin: 20px auto; /* Center horizontally */
+    font-family: Arial, sans-serif;
+    margin-bottom: 10px;
+}
+
+
+/* Hover effect */
+.file-drop-area:hover,
+.file-drop-area.drag-over {
+    border-color: #555;
+    background-color: #f0f0f0;
+}
+
+
+.file-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+.file-list li {
+    padding: 5px 0;
+}
+
+.success {
+    color: green;  /* Color for successful uploads */
+}
+.error {
+    color: red;    /* Color for failed uploads */
+}
+
+.submitButton {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: #000000;
+    background-color: lightblue;
+    border: none;
     border-radius: 4px;
-    padding: 0 16px;
-    height: 40px;
     cursor: pointer;
-    background-color: white;
-    border: 1px solid rgba(0, 0, 0, 0.16);
-    box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.05);
-    margin-right: 16px;
-    transition: background-color 200ms;
-
+    transition: background-color 0.3s ease;
 }
 
-/* file upload button hover state */
-input[type="file"]::file-selector-button:hover {
-    background-color: #f3f4f6;
-    color: black;
+.submitButton:hover {
+    background-color: #0056b3;
 }
 
-/* file upload button active state */
-input[type="file"]::file-selector-button:active {
-    background-color: #e5e7eb;
-    color: black;
-}
-
-.submitButton{
-    color: black;
-    cursor: pointer;
-    background-color: white;
-    border: 1px solid rgba(0, 0, 0, 0.16);
-    box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.05);
-    margin-top: 30px;
-    font-size: 15px;
-    padding: 10px;
-    border-radius: 10px;
-}
-
-.submitButton:hover{
-    background-color: #f3f4f6;
+.disclaimer {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #555;
 }
 
 .noPhotos{
@@ -120,7 +258,8 @@ input[type="file"]::file-selector-button:active {
     margin-top:40px;
     font-size: 25px;
 }
-/* Image Viewer */
+
+/* view_image.html */
 .imgViewHeader {
     display: flex;
     padding: 0px 25% 0px 25%;
