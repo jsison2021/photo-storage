@@ -6,6 +6,7 @@
     <title>Photo Storage</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
     <!-- Firebase App (required for all Firebase products) -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <!-- Firebase Authentication (for user authentication) -->
@@ -62,10 +63,6 @@
             <input class="submitButton" type="submit" value="Upload">
         </form>
 
-        <div class="progress-container" id="progress-container" style="display: none;">
-            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
-        </div>
-        
         {% if upload_status %}
         <p class="{% if upload_status == 'Successfully uploaded!' %}success{% elif upload_status in ['Failed to upload.', 'File already exists!','No files uploaded.'] %}error{% endif %}">
             {{ upload_status }}
@@ -114,7 +111,6 @@
         });
     });
 
-    /* File Logic */
     /* File Logic */
     const fileDropArea = document.getElementById('file-drop-area');
     const fileInput = document.getElementById('file-input');
@@ -173,48 +169,7 @@
             fileList.removeChild(listItem);  // Remove list item
         }
     }
-    document.getElementById('upload-form').addEventListener('submit', function(event) {
-        event.preventDefault();  // Prevent the default form submission
-
-        const formData = new FormData(this);
-        const xhr = new XMLHttpRequest();
-
-        // Show progress bar
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-bar');
-        progressContainer.style.display = 'block';
-
-        xhr.open('POST', '/upload', true);
-
-        // Update progress bar on progress event
-        xhr.upload.addEventListener('progress', function(event) {
-            if (event.lengthComputable) {
-                const percentComplete = (event.loaded / event.total) * 100;
-                progressBar.style.width = percentComplete + '%';
-            }
-        });
-
-        // Handle response
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                // Hide progress bar and reset
-                progressBar.style.width = '0%';
-                progressContainer.style.display = 'none';
-                // Optionally, you can show success or error messages here
-                // You might also want to refresh the file list here
-                // For example, you can reload the page to update the displayed files
-                window.location.reload(); // Reload the page to see new uploads
-            } else {
-                console.error("Upload failed:", xhr.responseText);
-                // Optionally hide the progress bar and show an error message
-                progressContainer.style.display = 'none';
-            }
-        };
-
-        // Send the form data
-        xhr.send(formData);
-    });
-
+    
 
 </script>
 
