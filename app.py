@@ -62,7 +62,6 @@ def login():
     if request.method == 'POST':
         # For POST request, retrieve the token from the JSON body
         token = request.json.get('token')  
-        print(token)
         if token:
             decoded_token = verify_firebase_token(token)
 
