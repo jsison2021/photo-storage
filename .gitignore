@@ -1,2 +1,4 @@
 .env
+.gitignore
+# Ignore Firebase Admin SDK credentials
 photo-storage-82b4b-firebase-adminsdk-dp9ju-1aa3c84e5b.json
