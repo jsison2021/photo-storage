@@ -27,8 +27,8 @@
         <p class = "dataTitle">Uploaded:</p>
         <p class = "dataText">{{ metadata.upload_time }}</p>
 
-        <p class = "dataTitle">Description:</p>
-        <p class = "dataText">{{ caption }}</p>
+        <p class="dataText">{{ caption | safe }}</p>
+
     </div>
 </body>
 </html>

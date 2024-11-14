@@ -10,11 +10,14 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from datetime import datetime, timedelta
 
+#Loads .env
 load_dotenv()
 app = Flask(__name__)
 
+#Creates Session to track user info
 app.secret_key = os.getenv('SESSION_SECRET_KEY')
 
+#Credentials to firebase project to decode tokens to confirm user
 firebase_creds = {
     "type": os.getenv('GOOGLE_TYPE'),
     "project_id": os.getenv('GOOGLE_PROJECT_ID'),
@@ -33,7 +36,6 @@ firebase_creds = {
 cred = credentials.Certificate(firebase_creds)
 firebase_admin.initialize_app(cred)
 
-
 #Initalize Storage and Datastores
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 DATA_STORE_NAME = os.getenv('DATA_STORE_NAME')
@@ -44,7 +46,7 @@ datastore_client = datastore.Client()
 api_key = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-PROMPT = 'describe the image'
+PROMPT = 'give a caption then a description seperately'
 
 #Verfies token at login, post, view, and delete
 def verify_firebase_token(token):
@@ -58,7 +60,6 @@ def verify_firebase_token(token):
 #Passes the necessiary firebase config to the frontend
 @app.route('/firebase-config', methods=['GET'])
 def get_firebase_config():
-    # Return Firebase configuration as JSON response
     firebaseConfig = {
         'apiKey': os.getenv('FIREBASE_API_KEY'),
         'authDomain': os.getenv('FIREBASE_AUTH_DOMAIN'),
@@ -97,7 +98,7 @@ def login():
 # Home
 @app.route('/')
 def index():
-    token = session.get('token')  # Get the token from the session
+    token = session.get('token')  
     upload_status = request.args.get('upload_status')
 
     if token:
@@ -108,7 +109,7 @@ def index():
             picture = session['picture']
             service = os.environ.get('K_SERVICE', 'Unknown service')
             revision = os.environ.get('K_REVISION', 'Unknown revision')
-            print(uid)
+           
             files = list_files(uid) 
             return render_template('index.html', files=files, Service=service, Revision=revision, uid=uid, name = name, picture = picture, upload_status = upload_status)
         else:
@@ -124,19 +125,17 @@ def upload_file():
     if token:
         decoded_token = verify_firebase_token(token)
         if decoded_token:
-            files = request.files.getlist('files')  # Retrieve list of files
-            print(files)
+            files = request.files.getlist('files')  
             if files:
                 uid = decoded_token.get('uid')
-                upload_status = []  # List to hold upload statuses
+                upload_status = []  
                 for file in files:
                     if file.filename == '':
-                        return redirect(url_for('index', upload_status="No files uploaded."))  # Redirect with status
+                        return redirect(url_for('index', upload_status="No files uploaded.")) 
                     else:
                         result = upload(file, uid)
-                        upload_status.append(result)  # Add each file's result to the list
+                        upload_status.append(result)  
                 
-                # Create a summary message based on the results
                 if any("Failed" in msg for msg in upload_status):
                     upload_status_message = "Failed upload."
                 if any("File already exists!" in msg for msg in upload_status):
@@ -144,7 +143,7 @@ def upload_file():
                 else:
                     upload_status_message = "Successfully uploaded!"
                 
-                return redirect(url_for('index', upload_status=upload_status_message))  # Redirect with status
+                return redirect(url_for('index', upload_status=upload_status_message))  
             else:
                 return redirect(url_for('index', upload_status="No files uploaded."))  
 
@@ -179,8 +178,6 @@ def upload(file, uid):
         # Store metadata in Datastore
         store_image_metadata(filename, uid)  
         return "Successfully uploaded!"  
-
-
 
 def generate_caption(filename):
     bucket = storage_client.bucket(BUCKET_NAME)
@@ -289,11 +286,10 @@ def list_files(uid):
 
     file_list = []
     for entity in results:
-        filename = entity['filename']  # This should just be the original filename
-        # Use url_for to correctly generate the URL, passing both uid and filename
+        filename = entity['filename'] 
         file_list.append({
-            'name': filename,  # Display original filename to user
-            'url': url_for('image_preview', uid=uid, filename=filename),  # Include uid
+            'name': filename,  
+            'url': url_for('image_preview', uid=uid, filename=filename), 
         })
 
     return file_list
@@ -351,6 +347,12 @@ def fetch_caption(uid, filename):
     if blob.exists():
         # Download the caption text as a string
         caption = blob.download_as_text()
+
+        #Formart the Text
+        caption = caption.replace('Caption:', '<strong>Caption:</strong>')
+        caption = caption.replace('Description:', '<strong>Description:</strong>')
+        caption = caption.replace('\n', '<br>')
+
         return caption
     else:
         return "No caption available"
