@@ -13,8 +13,6 @@ RUN pip install --trusted-host pypi.python.org -r requirements.txt
 # Copy the rest of the working directory contents into the container at /app
 COPY . .
 
-COPY photo-storage-82b4b-firebase-adminsdk-dp9ju-1aa3c84e5b.json /app/
-
 EXPOSE 8080
 
 CMD ["python", "app.py"]
