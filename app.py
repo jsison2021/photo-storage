@@ -36,11 +36,15 @@ firebase_creds = {
 cred = credentials.Certificate(firebase_creds)
 firebase_admin.initialize_app(cred)
 
+# Create Google Cloud credentials from environment variables
+from google.oauth2 import service_account
+google_credentials = service_account.Credentials.from_service_account_info(firebase_creds)
+
 #Initalize Storage and Datastores
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 DATA_STORE_NAME = os.getenv('DATA_STORE_NAME')
-storage_client = storage.Client()
-datastore_client = datastore.Client(database=os.getenv('DATASTORE_DATABASE_ID', '(default)'))
+storage_client = storage.Client(credentials=google_credentials, project=os.getenv('GOOGLE_PROJECT_ID'))
+datastore_client = datastore.Client(credentials=google_credentials, project=os.getenv('GOOGLE_PROJECT_ID'), database=os.getenv('DATASTORE_DATABASE_ID', '(default)'))
 
 # Gemini AI
 api_key = os.getenv('GEMINI_API_KEY')
