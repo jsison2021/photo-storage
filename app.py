@@ -40,13 +40,15 @@ firebase_admin.initialize_app(cred)
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 DATA_STORE_NAME = os.getenv('DATA_STORE_NAME')
 storage_client = storage.Client()
-datastore_client = datastore.Client()
+datastore_client = datastore.Client(database=os.getenv('DATASTORE_DATABASE_ID', '(default)'))
 
 # Gemini AI
 api_key = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-PROMPT = 'give a caption then a description seperately'
+model = genai.GenerativeModel(model_name="gemini-2.0-flash")
+PROMPT = '''Analyze this image and provide:
+Caption: [A short, catchy title for this image in 5-10 words]
+Description: [A detailed description of what's in the image in 1-2 sentences]'''
 
 #Verfies token at login, post, view, and delete
 def verify_firebase_token(token):
@@ -82,11 +84,12 @@ def login():
 
             if decoded_token:
                 #print(decoded_token)
-                #Saves data to the session 
-                session['token'] = token 
-                session['uid'] = decoded_token.get('uid')  
-                session['name'] = decoded_token.get('name')
-                session['picture'] = decoded_token.get('picture')    
+                #Saves data to the session
+                session['token'] = token
+                session['uid'] = decoded_token.get('uid')
+                session['name'] = decoded_token.get('name') or decoded_token.get('email', '').split('@')[0]
+                session['email'] = decoded_token.get('email')
+                session['picture'] = decoded_token.get('picture') or ''
 
                 return redirect(url_for('index'))  # Redirect to the login page if no token
         else:
@@ -106,12 +109,13 @@ def index():
         if decoded_token:
             uid = session['uid']
             name = session['name']
-            picture = session['picture']
+            email = session.get('email', '')
+            picture = session.get('picture', '')
             service = os.environ.get('K_SERVICE', 'Unknown service')
             revision = os.environ.get('K_REVISION', 'Unknown revision')
-           
-            files = list_files(uid) 
-            return render_template('index.html', files=files, Service=service, Revision=revision, uid=uid, name = name, picture = picture, upload_status = upload_status)
+
+            files = list_files(uid)
+            return render_template('index.html', files=files, Service=service, Revision=revision, uid=uid, name=name, email=email, picture=picture, upload_status=upload_status)
         else:
             session.clear()  
             return redirect(url_for('login'))  
@@ -200,7 +204,10 @@ def generate_caption(filename):
     try:
         # Upload the image file to Gemini
         img = upload_to_gemini(BytesIO(image_data), mime_type=mime_type)
-        
+
+        if img is None:
+            return 'Error uploading image to Gemini'
+
         # Send prompt with image to generate content
         parts = [img, PROMPT]
         response = model.generate_content(parts)
@@ -208,7 +215,8 @@ def generate_caption(filename):
         # Return the caption text generated
         return response.text if response and hasattr(response, 'text') else 'No caption generated'
     except Exception as e:
-        print(f"Error generating caption: {e}")
+        import sys
+        print(f"Error generating caption: {e}", file=sys.stderr, flush=True)
         return 'Error generating caption'
 
 
@@ -217,7 +225,8 @@ def upload_to_gemini(path, mime_type=None):
     try:
         return genai.upload_file(path, mime_type=mime_type)
     except Exception as e:
-        print(f"Error uploading file to Gemini: {e}")
+        import sys
+        print(f"Error uploading file to Gemini: {e}", file=sys.stderr, flush=True)
         return None
 
 def save_caption_as_text(filename, caption):
@@ -236,15 +245,15 @@ def store_image_metadata(filename, uid):
     key_name = f"{uid}/{filename}"  # Use UID in the key for uniqueness
     entity = datastore.Entity(key=datastore_client.key(DATA_STORE_NAME, key_name))
 
+    # Get current time in EST (UTC-5)
     upload_time_est = datetime.utcnow() - timedelta(hours=5)
-
-    formatted_upload_time = upload_time_est.strftime("%Y-%m-%d %H:%M:%S %Z")
+    formatted_upload_time = upload_time_est.strftime("%B %d, %Y at %I:%M %p EST")
 
     # Update the entity with metadata
     entity.update({
         'uid': uid,
         'filename': filename,  # Store original filename
-        'upload_time': upload_time_est,  # Use EST/EDT time
+        'upload_time': formatted_upload_time,  # Store as formatted string
         'bucket_name': BUCKET_NAME,
         'url': f"/image_preview/{uid}/{filename}"  # Adjust the URL to include the UID
     })
@@ -279,20 +288,97 @@ def image_preview(uid, filename):
 
 #List files
 def list_files(uid):
-    
+
     query = datastore_client.query(kind=DATA_STORE_NAME)
     query.add_filter('uid', '=', uid)  # Filter by UID
     results = list(query.fetch())
 
     file_list = []
     for entity in results:
-        filename = entity['filename'] 
+        filename = entity['filename']
+        upload_time = entity.get('upload_time', '')
+
+        # Fetch caption and parse it
+        caption_data = fetch_caption_data(uid, filename)
+
         file_list.append({
-            'name': filename,  
-            'url': url_for('image_preview', uid=uid, filename=filename), 
+            'id': entity.key.name,
+            'name': filename,
+            'url': url_for('image_preview', uid=uid, filename=filename),
+            'upload_time': upload_time,
+            'caption': caption_data.get('caption', ''),
+            'description': caption_data.get('description', ''),
+            'tags': caption_data.get('tags', []),
+            'is_favorite': entity.get('is_favorite', False),
+            'folder': entity.get('folder', ''),
         })
 
     return file_list
+
+def fetch_caption_data(uid, filename):
+    """Fetch and parse caption data from the .txt file"""
+    txt_filename = f"{uid}/{os.path.splitext(filename)[0]}.txt"
+
+    bucket = storage_client.bucket(BUCKET_NAME)
+    blob = bucket.blob(txt_filename)
+
+    result = {
+        'caption': '',
+        'description': '',
+        'tags': []
+    }
+
+    if blob.exists():
+        try:
+            caption_text = blob.download_as_text()
+
+            # Parse caption and description
+            # Handle markdown format like **Caption:** or *Caption:*
+            lines = caption_text.strip().split('\n')
+            caption_line = ''
+            description_lines = []
+            in_description = False
+
+            for line in lines:
+                line = line.strip()
+                # Remove markdown bold/italic markers for checking
+                clean_line = line.replace('**', '').replace('*', '')
+
+                if clean_line.lower().startswith('caption:'):
+                    caption_line = clean_line.replace('Caption:', '').replace('caption:', '').strip()
+                    in_description = False
+                elif clean_line.lower().startswith('description:'):
+                    in_description = True
+                    desc_part = clean_line.replace('Description:', '').replace('description:', '').strip()
+                    if desc_part:
+                        description_lines.append(desc_part)
+                elif in_description and line and not line.startswith('```') and not line.startswith('{') and not line.startswith('['):
+                    # Skip JSON/code blocks
+                    description_lines.append(line)
+
+            result['caption'] = caption_line
+            result['description'] = ' '.join(description_lines)
+
+            # Extract tags from caption/description (simple word extraction)
+            full_text = f"{caption_line} {' '.join(description_lines)}"
+            # Extract meaningful words as tags (words longer than 4 chars, not common words)
+            common_words = {'this', 'that', 'with', 'from', 'they', 'have', 'been', 'were', 'being', 'their', 'there', 'which', 'would', 'could', 'should', 'about', 'after', 'before', 'because', 'while', 'where', 'when', 'what', 'into', 'through', 'during', 'each', 'some', 'other', 'than', 'then', 'only', 'over', 'such', 'also', 'back', 'most', 'very', 'just', 'even', 'image', 'shows', 'appears', 'features', 'displaying'}
+            words = full_text.lower().split()
+            tags = []
+            for word in words:
+                # Clean word
+                clean_word = ''.join(c for c in word if c.isalnum())
+                if len(clean_word) > 4 and clean_word not in common_words and clean_word not in tags:
+                    tags.append(clean_word)
+                    if len(tags) >= 5:  # Limit to 5 tags
+                        break
+
+            result['tags'] = tags
+
+        except Exception as e:
+            print(f"Error parsing caption: {e}")
+
+    return result
 
 # GET file info
 @app.route('/images/<uid>/<filename>')
@@ -357,6 +443,113 @@ def fetch_caption(uid, filename):
     else:
         return "No caption available"
 
+# ─────────────── Folders API ───────────────
+
+# Create a new folder
+@app.route('/folders', methods=['POST'])
+def create_folder():
+    token = session.get('token')
+    if not token:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    decoded_token = verify_firebase_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    uid = decoded_token.get('uid')
+    data = request.get_json()
+    folder_name = data.get('name', '').strip()
+
+    if not folder_name:
+        return jsonify({'error': 'Folder name is required'}), 400
+
+    # Create folder entity in Datastore
+    key_name = f"{uid}/folder/{folder_name}"
+    entity = datastore.Entity(key=datastore_client.key('Folders', key_name))
+    entity.update({
+        'uid': uid,
+        'name': folder_name,
+        'created_at': datetime.utcnow().isoformat()
+    })
+    datastore_client.put(entity)
+
+    return jsonify({'success': True, 'folder': folder_name})
+
+# Get all folders for a user
+@app.route('/folders', methods=['GET'])
+def get_folders():
+    token = session.get('token')
+    if not token:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    decoded_token = verify_firebase_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    uid = decoded_token.get('uid')
+
+    query = datastore_client.query(kind='Folders')
+    query.add_filter(filter=datastore.query.PropertyFilter('uid', '=', uid))
+    results = list(query.fetch())
+
+    folders = [{'name': entity['name'], 'created_at': entity.get('created_at', '')} for entity in results]
+    return jsonify({'folders': folders})
+
+# Delete a folder
+@app.route('/folders/<folder_name>', methods=['DELETE'])
+def delete_folder(folder_name):
+    token = session.get('token')
+    if not token:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    decoded_token = verify_firebase_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    uid = decoded_token.get('uid')
+
+    # Delete folder entity
+    key_name = f"{uid}/folder/{folder_name}"
+    datastore_client.delete(datastore_client.key('Folders', key_name))
+
+    # Remove folder from all photos in this folder
+    query = datastore_client.query(kind=DATA_STORE_NAME)
+    query.add_filter(filter=datastore.query.PropertyFilter('uid', '=', uid))
+    query.add_filter(filter=datastore.query.PropertyFilter('folder', '=', folder_name))
+
+    for entity in query.fetch():
+        entity['folder'] = None
+        datastore_client.put(entity)
+
+    return jsonify({'success': True})
+
+# Move photo to folder
+@app.route('/photos/<filename>/folder', methods=['PUT'])
+def move_to_folder(filename):
+    token = session.get('token')
+    if not token:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    decoded_token = verify_firebase_token(token)
+    if not decoded_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    uid = decoded_token.get('uid')
+    data = request.get_json()
+    folder_name = data.get('folder')  # Can be None to remove from folder
+
+    # Update photo metadata
+    key_name = f"{uid}/{filename}"
+    entity = datastore_client.get(key=datastore_client.key(DATA_STORE_NAME, key_name))
+
+    if not entity:
+        return jsonify({'error': 'Photo not found'}), 404
+
+    entity['folder'] = folder_name
+    datastore_client.put(entity)
+
+    return jsonify({'success': True, 'folder': folder_name})
+
 # Delete File
 @app.route('/delete/<uid>/<filename>', methods=['POST'])
 def delete_image(uid, filename):
@@ -401,4 +594,6 @@ def delete_image_metadata(uid, filename):
 if __name__ == '__main__':
     # Run the app on the Cloud Run environment
     server_port = os.environ.get('PORT', '8080')
-    app.run(debug=False, port=server_port, host='0.0.0.0')
+    # Set debug=True for local development (auto-reload on file changes)
+    # Set to False for production deployment
+    app.run(debug=True, port=server_port, host='0.0.0.0')

@@ -4,173 +4,2100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photo Storage</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
-    <!-- Firebase App (required for all Firebase products) -->
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a84ff'/><text y='.9em' x='50%' text-anchor='middle' font-size='70'>📷</text></svg>">
+
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <!-- Firebase Authentication (for user authentication) -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="sidebar-logo-icon">
+                        <i class="fas fa-images"></i>
+                    </div>
+                    <span class="sidebar-logo-text">Photo Storage</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+
+            <!-- Sidebar Navigation -->
+            <nav class="sidebar-nav">
+                <!-- Main Navigation -->
+                <div class="nav-section">
+                    <div class="nav-section-header">
+                        <span class="nav-section-title">Library</span>
+                    </div>
+                    <a href="#" class="nav-item active" data-view="all">
+                        <span class="nav-item-icon"><i class="fas fa-photo-film"></i></span>
+                        <span class="nav-item-text">All Photos</span>
+                        <span class="nav-item-badge" id="totalCount">{{ files|length if files else 0 }}</span>
+                    </a>
+                    <a href="#" class="nav-item" data-view="favorites">
+                        <span class="nav-item-icon"><i class="fas fa-heart"></i></span>
+                        <span class="nav-item-text">Favorites</span>
+                    </a>
+                    <a href="#" class="nav-item" data-view="recent">
+                        <span class="nav-item-icon"><i class="fas fa-clock"></i></span>
+                        <span class="nav-item-text">Recent</span>
+                    </a>
+                </div>
+
+                <!-- Folders -->
+                <div class="nav-section">
+                    <div class="nav-section-header">
+                        <span class="nav-section-title">Folders</span>
+                        <button class="nav-section-action" id="createFolderBtn" title="New Folder">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="foldersList">
+                        <!-- Folders will be populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Tags Cloud -->
+                <div class="nav-section">
+                    <div class="nav-section-header">
+                        <span class="nav-section-title">Tags</span>
+                    </div>
+                    <div class="tag-cloud" id="tagCloud">
+                        <!-- Tags will be populated via JS -->
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Sidebar Footer - User Profile -->
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <img src="{{ picture }}" alt="{{ name }}" class="avatar avatar-sm">
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name">{{ name }}</div>
+                        <div class="sidebar-user-email">{{ email if email else '' }}</div>
+                    </div>
+                </div>
+                <button class="btn-icon btn-icon-sm" onclick="logout()" title="Sign Out">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Content Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <button class="btn-icon btn-icon-sm" id="mobileMenuBtn" style="display: none;">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="view-title" id="viewTitle">All Photos</h1>
+                    <span class="photo-count" id="photoCount">{{ files|length if files else 0 }} photos</span>
+                </div>
+
+                <div class="header-center">
+                    <div class="search-input-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Search photos, tags, captions...">
+                        <button class="search-clear" id="searchClear">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <!-- View Toggle -->
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" data-view-mode="grid" title="Grid View">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button class="toggle-btn" data-view-mode="masonry" title="Masonry View">
+                            <i class="fas fa-th"></i>
+                        </button>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <button class="btn btn-primary" id="uploadBtn">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Upload</span>
+                    </button>
+
+                    <!-- Selection Mode Toggle -->
+                    <button class="btn-icon" id="selectModeBtn" title="Select Photos">
+                        <i class="fas fa-check-square"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Body -->
+            <div class="content-body">
+                <!-- Upload Status Message -->
+                {% if upload_status %}
+                <div class="alert {% if upload_status == 'Successfully uploaded!' %}alert-success{% else %}alert-error{% endif %}" id="uploadAlert">
+                    <i class="fas {% if upload_status == 'Successfully uploaded!' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                    <span>{{ upload_status }}</span>
+                    <button class="alert-close" onclick="this.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                {% endif %}
+
+                <!-- Photo Gallery -->
+                {% if files %}
+                <div class="gallery grid-view" id="gallery">
+                    {% for file in files %}
+                    <div class="photo-card" data-id="{{ file.id if file.id else loop.index }}" data-name="{{ file.name }}" data-caption="{{ file.caption if file.caption else '' }}" data-description="{{ file.description if file.description else '' }}" data-tags="{{ file.tags|join(',') if file.tags else '' }}" data-upload-time="{{ file.upload_time if file.upload_time else '' }}" data-folder="{{ file.folder if file.folder else '' }}">
+                        <!-- Selection Checkbox -->
+                        <div class="photo-checkbox">
+                            <i class="fas fa-check"></i>
+                        </div>
+
+                        <!-- Photo Image -->
+                        <img
+                            src="{{ url_for('image_preview', uid=uid, filename=file.name) }}"
+                            alt="{{ file.name }}"
+                            class="photo-img"
+                            loading="lazy"
+                        >
+
+                        <!-- Overlay -->
+                        <div class="photo-overlay"></div>
+
+                        <!-- Actions -->
+                        <div class="photo-actions">
+                            <button class="photo-action-btn favorite {% if file.is_favorite %}active{% endif %}" title="Favorite">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                            <button class="photo-action-btn more-btn" title="More Options">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <!-- Dropdown Menu -->
+                            <div class="photo-dropdown">
+                                <button class="photo-dropdown-item" data-action="download">
+                                    <i class="fas fa-download"></i>
+                                    <span>Download</span>
+                                </button>
+                                <button class="photo-dropdown-item" data-action="move">
+                                    <i class="fas fa-folder"></i>
+                                    <span>Move to Folder</span>
+                                </button>
+                                <button class="photo-dropdown-item" data-action="info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Details</span>
+                                </button>
+                                <div class="photo-dropdown-divider"></div>
+                                <button class="photo-dropdown-item danger" data-action="delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                    <span>Delete</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="photo-info">
+                            <div class="photo-caption">{{ file.caption if file.caption else file.name }}</div>
+                            <div class="photo-date">{{ file.upload_time if file.upload_time else '' }}</div>
+                            {% if file.tags %}
+                            <div class="photo-tags">
+                                {% for tag in file.tags[:3] %}
+                                <span class="photo-tag">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-images"></i>
+                    </div>
+                    <h2 class="empty-state-title">No photos yet</h2>
+                    <p class="empty-state-text">Upload your first photos to start building your collection</p>
+                    <button class="btn btn-primary btn-lg" onclick="document.getElementById('uploadBtn').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        Upload Photos
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-backdrop" onclick="closeUploadModal()"></div>
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2 class="modal-title">Upload Photos</h2>
+                <button class="modal-close" onclick="closeUploadModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form action="/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="modal-body">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-zone-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3 class="upload-zone-title">Drop photos here</h3>
+                        <p class="upload-zone-text">or <span>browse files</span></p>
+                        <input type="file" name="files" id="fileInput" accept="image/png, image/jpeg" multiple hidden>
+                    </div>
+
+                    <!-- File List -->
+                    <div class="file-preview-list" id="filePreviewList"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadSubmitBtn" disabled>
+                        <i class="fas fa-upload"></i>
+                        Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <!-- Close Button -->
+        <button class="lightbox-close" onclick="closeLightbox()">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Toolbar -->
+        <div class="lightbox-toolbar">
+            <button class="lightbox-toolbar-btn favorite" id="lightboxFavorite" title="Favorite">
+                <i class="fas fa-heart"></i>
+            </button>
+            <button class="lightbox-toolbar-btn" id="lightboxInfo" title="Info">
+                <i class="fas fa-info-circle"></i>
+            </button>
+            <button class="lightbox-toolbar-btn" id="lightboxDownload" title="Download">
+                <i class="fas fa-download"></i>
+            </button>
+            <button class="lightbox-toolbar-btn" id="lightboxDelete" title="Delete">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+
+        <!-- Navigation -->
+        <button class="lightbox-nav lightbox-prev" id="lightboxPrev">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="lightbox-nav lightbox-next" id="lightboxNext">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <!-- Content -->
+        <div class="lightbox-content">
+            <img src="" alt="" class="lightbox-image" id="lightboxImage">
+        </div>
+
+        <!-- Counter -->
+        <div class="lightbox-counter">
+            <span class="lightbox-counter-current" id="lightboxCurrent">1</span>
+            <span>/</span>
+            <span id="lightboxTotal">{{ files|length if files else 0 }}</span>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="lightbox-info">
+            <div class="lightbox-info-header">
+                <h3 class="lightbox-info-title">Details</h3>
+                <button class="lightbox-info-close" onclick="toggleLightboxInfo()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="lightbox-info-content">
+                <div class="lightbox-info-section">
+                    <div class="lightbox-info-label">Caption</div>
+                    <p class="lightbox-caption" id="lightboxCaption">-</p>
+                </div>
+                <div class="lightbox-info-section">
+                    <div class="lightbox-info-label">Description</div>
+                    <p class="lightbox-description" id="lightboxDescription">-</p>
+                </div>
+                <div class="lightbox-info-section">
+                    <div class="lightbox-info-label">Tags</div>
+                    <div class="lightbox-tags" id="lightboxTags"></div>
+                </div>
+                <div class="lightbox-info-section">
+                    <div class="lightbox-info-label">File Info</div>
+                    <div class="lightbox-metadata">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Filename</span>
+                            <span class="metadata-value" id="lightboxFilename">-</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Uploaded</span>
+                            <span class="metadata-value" id="lightboxDate">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions-bar" id="bulkActionsBar">
+        <span class="selection-count"><span id="selectedCount">0</span> selected</span>
+        <div class="divider-vertical"></div>
+        <button class="bulk-action-btn" id="bulkFavorite">
+            <i class="fas fa-heart"></i>
+            <span>Favorite</span>
+        </button>
+        <button class="bulk-action-btn" id="bulkMove">
+            <i class="fas fa-folder"></i>
+            <span>Move</span>
+        </button>
+        <button class="bulk-action-btn" id="bulkDownload">
+            <i class="fas fa-download"></i>
+            <span>Download</span>
+        </button>
+        <button class="bulk-action-btn danger" id="bulkDelete">
+            <i class="fas fa-trash"></i>
+            <span>Delete</span>
+        </button>
+        <div class="divider-vertical"></div>
+        <button class="bulk-action-btn" id="cancelSelection">
+            <i class="fas fa-times"></i>
+            <span>Cancel</span>
+        </button>
+    </div>
+
+    <!-- Upload Progress Overlay -->
+    <div class="upload-overlay" id="uploadOverlay">
+        <div class="upload-overlay-content glass-card">
+            <div class="upload-spinner">
+                <div class="spinner"></div>
+            </div>
+            <h3 class="upload-overlay-title" id="uploadOverlayTitle">Uploading...</h3>
+            <p class="upload-overlay-message" id="uploadOverlayMessage">Please wait while your photos are being uploaded.</p>
+            <div class="upload-progress-bar">
+                <div class="upload-progress-fill" id="uploadProgressFill"></div>
+            </div>
+            <p class="upload-progress-text" id="uploadProgressText">0%</p>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-modal-backdrop"></div>
+        <div class="confirm-modal-content glass-card">
+            <div class="confirm-modal-icon" id="confirmModalIcon">
+                <i class="fas fa-trash"></i>
+            </div>
+            <h3 class="confirm-modal-title" id="confirmModalTitle">Delete Photo?</h3>
+            <p class="confirm-modal-message" id="confirmModalMessage">This action cannot be undone.</p>
+            <div class="confirm-modal-actions">
+                <button class="btn btn-secondary" id="confirmModalCancel">Cancel</button>
+                <button class="btn btn-danger" id="confirmModalConfirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div class="modal" id="createFolderModal">
+        <div class="modal-backdrop" onclick="closeCreateFolderModal()"></div>
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Folder</h2>
+                <button class="modal-close" onclick="closeCreateFolderModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Folder Name</label>
+                    <input type="text" class="form-input" id="folderNameInput" placeholder="Enter folder name...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateFolderModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createFolder()">
+                    <i class="fas fa-folder-plus"></i>
+                    Create
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move to Folder Modal -->
+    <div class="modal" id="moveToFolderModal">
+        <div class="modal-backdrop" onclick="closeMoveToFolderModal()"></div>
+        <div class="modal-content glass-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Move to Folder</h2>
+                <button class="modal-close" onclick="closeMoveToFolderModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="folder-list" id="folderListForMove">
+                    <!-- Folders will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMoveToFolderModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script>
+        // Initialize Firebase
         fetch('/firebase-config')
             .then(response => response.json())
             .then(firebaseConfig => {
-                // Initialize Firebase
                 firebase.initializeApp(firebaseConfig);
             })
-        .catch(error => console.error("Error loading Firebase config:", error));
+            .catch(error => console.error("Error loading Firebase config:", error));
 
+        // Logout function
         function logout() {
             firebase.auth().signOut().then(() => {
-                // Redirect to the login page
-                window.location.href = "/login";  // Change this to the correct login URL if necessary
+                window.location.href = "/login";
             }).catch((error) => {
-                console.error("Sign out error: ", error);
+                console.error("Sign out error:", error);
             });
         }
 
-    </script>
+        // State
+        let currentView = 'grid';
+        let isSelectionMode = false;
+        let selectedPhotos = new Set();
+        let currentPhotoIndex = 0;
+        let photos = [];
+        let confirmCallback = null;
 
-</head>
-<body class="body">
-    
-    <div class="header-container">
-        <h1 class="title">Photo Storage</h1>
-        
-        <div class="profile-dropdown">
-            <button class="profile-button">
-                <img src="{{ picture }}" alt="{{ name }} profile picture" class="profile-picture">
-            </button>
-            <div class="dropdown-content" id="dropdown-content">
-                <img src="{{ picture }}" alt="{{ name }} profile picture">
-                <p>Hi, {{ name }}</p>
-                <button onclick="logout()">Sign Out</button>
-            </div>
-        </div>
-    </div>
-    
-    <div class="container">
-        <form action="/upload" method="POST" enctype="multipart/form-data" id="upload-form">
-            <div class="file-drop-area" id="file-drop-area">
-                <p>Drag and drop files here or click to select</p>
-                <label class="disclaimer">Files accepted: *.jpg, *.jpeg, *.png</label>
-                <input type="file" name="files" id="file-input" accept="image/png, image/jpeg" multiple hidden>
-                
-            </div>
-            <ul class="file-list" id="file-list"></ul>
-            
-            <input class="submitButton" type="submit" value="Upload">
-        </form>
+        // Custom Confirm Modal
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmModalIcon = document.getElementById('confirmModalIcon');
+        const confirmModalTitle = document.getElementById('confirmModalTitle');
+        const confirmModalMessage = document.getElementById('confirmModalMessage');
+        const confirmModalCancel = document.getElementById('confirmModalCancel');
+        const confirmModalConfirm = document.getElementById('confirmModalConfirm');
 
-        {% if upload_status %}
-        <p class="{% if upload_status == 'Successfully uploaded!' %}success{% elif upload_status in ['Failed to upload.', 'File already exists!','No files uploaded.'] %}error{% endif %}">
-            {{ upload_status }}
-        </p> <!-- Display the upload status with conditional classes -->
-        
-        {% endif %}
+        function showConfirm({ title, message, icon = 'trash', confirmText = 'Delete', confirmClass = 'btn-danger' }) {
+            return new Promise((resolve) => {
+                confirmModalTitle.textContent = title;
+                confirmModalMessage.textContent = message;
+                confirmModalIcon.innerHTML = `<i class="fas fa-${icon}"></i>`;
+                confirmModalConfirm.textContent = confirmText;
+                confirmModalConfirm.className = `btn ${confirmClass}`;
 
-        <div class="imgContainer">
-            {% if files %}
-                <div class="imgGrid">
-                    {% for file in files %}
-                        <div class="img">
-                            <div class="imageHeader">
-                                
-                                    <p class="imgTitle">{{file.name}}</p>
-                               
-                            </div>
-                            <a href="{{ url_for('view_image', uid=uid, filename=file.name) }}">
-                                <img src="{{ url_for('image_preview', uid=uid, filename=file.name) }}" alt="{{ file.name }}">
-                            </a>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class = "noPhotos">You have no photos. Start uploading!</p>
-            {% endif %}
-        </div>
-    </div>
-    
-</body>
+                confirmCallback = resolve;
+                confirmModal.classList.add('open');
+            });
+        }
 
-<script>
-    /* Dropdown */
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelector('.profile-button').addEventListener('click', function(event) {
-            const dropdown = document.getElementById('dropdown-content');
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-            event.stopPropagation();
+        function closeConfirmModal(result) {
+            confirmModal.classList.remove('open');
+            if (confirmCallback) {
+                confirmCallback(result);
+                confirmCallback = null;
+            }
+        }
+
+        confirmModalCancel.addEventListener('click', () => closeConfirmModal(false));
+        confirmModalConfirm.addEventListener('click', () => closeConfirmModal(true));
+        confirmModal.querySelector('.confirm-modal-backdrop').addEventListener('click', () => closeConfirmModal(false));
+
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadModal = document.getElementById('uploadModal');
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const filePreviewList = document.getElementById('filePreviewList');
+        const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
+        const gallery = document.getElementById('gallery');
+        const lightbox = document.getElementById('lightbox');
+        const searchInput = document.getElementById('searchInput');
+        const searchClear = document.getElementById('searchClear');
+        const selectModeBtn = document.getElementById('selectModeBtn');
+        const bulkActionsBar = document.getElementById('bulkActionsBar');
+        const selectedCountEl = document.getElementById('selectedCount');
+
+        // Initialize photos array from DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            if (gallery) {
+                const photoCards = gallery.querySelectorAll('.photo-card');
+                photoCards.forEach((card, index) => {
+                    photos.push({
+                        index: index,
+                        id: card.dataset.id,
+                        name: card.dataset.name,
+                        caption: card.dataset.caption,
+                        description: card.dataset.description,
+                        uploadTime: card.dataset.uploadTime,
+                        tags: card.dataset.tags ? card.dataset.tags.split(',') : [],
+                        folder: card.dataset.folder || '',
+                        src: card.querySelector('.photo-img').src,
+                        element: card
+                    });
+                });
+            }
+
+            // Check for mobile
+            checkMobileView();
+            window.addEventListener('resize', checkMobileView);
+
+            // Auto-dismiss success alerts after 4 seconds
+            const uploadAlert = document.getElementById('uploadAlert');
+            if (uploadAlert && uploadAlert.classList.contains('alert-success')) {
+                setTimeout(() => {
+                    uploadAlert.style.opacity = '0';
+                    uploadAlert.style.transform = 'translateY(-20px)';
+                    setTimeout(() => uploadAlert.remove(), 300);
+                }, 4000);
+            }
+
+            // Clear upload_status from URL to prevent showing on refresh
+            const url = new URL(window.location);
+            if (url.searchParams.has('upload_status')) {
+                url.searchParams.delete('upload_status');
+                window.history.replaceState({}, '', url);
+            }
+
+            // Populate sidebar sections
+            populateSidebar();
         });
 
-        window.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('dropdown-content');
-            if (!event.target.closest('.profile-dropdown')) {
-                dropdown.style.display = 'none';
+        // Folders state
+        let userFolders = [];
+        let photoToMove = null;
+
+        async function populateSidebar() {
+            // Collect all tags from photos
+            const allTags = {};
+            photos.forEach(photo => {
+                photo.tags.forEach(tag => {
+                    if (tag && tag.trim()) {
+                        allTags[tag] = (allTags[tag] || 0) + 1;
+                    }
+                });
+            });
+
+            // Populate Tags Cloud
+            const tagCloud = document.getElementById('tagCloud');
+            const sortedTags = Object.entries(allTags).sort((a, b) => b[1] - a[1]);
+
+            if (sortedTags.length > 0) {
+                tagCloud.innerHTML = sortedTags.slice(0, 10).map(([tag, count]) => `
+                    <span class="sidebar-tag" data-tag="${tag}">
+                        ${tag}
+                        <span class="sidebar-tag-count">${count}</span>
+                    </span>
+                `).join('');
+
+                // Add click handlers for tags
+                tagCloud.querySelectorAll('.sidebar-tag').forEach(tagEl => {
+                    tagEl.addEventListener('click', () => {
+                        const tag = tagEl.dataset.tag;
+                        filterPhotosByTag(tag);
+                        document.getElementById('viewTitle').textContent = `#${tag}`;
+                        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    });
+                });
+            } else {
+                tagCloud.innerHTML = '<span class="sidebar-empty">No tags yet</span>';
+            }
+
+            // Fetch and populate folders
+            await loadFolders();
+        }
+
+        async function loadFolders() {
+            try {
+                const response = await fetch('/folders');
+                const data = await response.json();
+                userFolders = data.folders || [];
+                renderFoldersList();
+            } catch (error) {
+                console.error('Error loading folders:', error);
+                userFolders = [];
+                renderFoldersList();
+            }
+        }
+
+        function renderFoldersList() {
+            const foldersList = document.getElementById('foldersList');
+
+            if (userFolders.length > 0) {
+                // Count photos in each folder
+                const folderCounts = {};
+                photos.forEach(photo => {
+                    if (photo.folder) {
+                        folderCounts[photo.folder] = (folderCounts[photo.folder] || 0) + 1;
+                    }
+                });
+
+                foldersList.innerHTML = userFolders.map(folder => `
+                    <a href="#" class="nav-item" data-folder="${folder.name}">
+                        <span class="nav-item-icon"><i class="fas fa-folder"></i></span>
+                        <span class="nav-item-text">${folder.name}</span>
+                        <span class="nav-item-badge">${folderCounts[folder.name] || 0}</span>
+                    </a>
+                `).join('');
+
+                // Add click handlers for folders
+                foldersList.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                        const folderName = item.dataset.folder;
+                        filterPhotosByFolder(folderName);
+                        document.getElementById('viewTitle').textContent = folderName;
+                    });
+                });
+            } else {
+                foldersList.innerHTML = '<span class="sidebar-empty">No folders yet</span>';
+            }
+        }
+
+        function filterPhotosByFolder(folderName) {
+            if (!gallery) return;
+
+            const cards = gallery.querySelectorAll('.photo-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const cardFolder = card.dataset.folder;
+                const show = cardFolder === folderName;
+                card.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+
+            document.getElementById('photoCount').textContent = `${visibleCount} photo${visibleCount !== 1 ? 's' : ''}`;
+        }
+
+        // Create Folder Modal
+        const createFolderModal = document.getElementById('createFolderModal');
+        const folderNameInput = document.getElementById('folderNameInput');
+
+        document.getElementById('createFolderBtn').addEventListener('click', () => {
+            createFolderModal.classList.add('open');
+            folderNameInput.value = '';
+            folderNameInput.focus();
+        });
+
+        function closeCreateFolderModal() {
+            createFolderModal.classList.remove('open');
+        }
+
+        async function createFolder() {
+            const name = folderNameInput.value.trim();
+            if (!name) return;
+
+            try {
+                const response = await fetch('/folders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+
+                if (response.ok) {
+                    closeCreateFolderModal();
+                    await loadFolders();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to create folder');
+                }
+            } catch (error) {
+                console.error('Error creating folder:', error);
+                alert('Failed to create folder');
+            }
+        }
+
+        // Enter key to create folder
+        folderNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createFolder();
+        });
+
+        // Move to Folder Modal
+        const moveToFolderModal = document.getElementById('moveToFolderModal');
+        const folderListForMove = document.getElementById('folderListForMove');
+
+        function openMoveToFolderModal(photoName) {
+            photoToMove = photoName;
+
+            // Find the photo to check its current folder
+            const photo = photos.find(p => p.name === photoName);
+            const currentFolder = photo ? photo.folder : '';
+
+            // Build folder list
+            let html = '';
+
+            // Only show "Remove from folder" if photo is currently in a folder
+            if (currentFolder) {
+                html += `
+                    <div class="folder-option" data-folder="">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Remove from folder</span>
+                    </div>
+                `;
+            }
+
+            userFolders.forEach(folder => {
+                // Skip the current folder the photo is already in
+                if (folder.name === currentFolder) return;
+
+                html += `
+                    <div class="folder-option" data-folder="${folder.name}">
+                        <i class="fas fa-folder"></i>
+                        <span>${folder.name}</span>
+                    </div>
+                `;
+            });
+
+            if (userFolders.length === 0) {
+                html += '<p class="sidebar-empty">No folders yet. Create one first!</p>';
+            } else if (!html) {
+                html += '<p class="sidebar-empty">Photo is already in the only folder.</p>';
+            }
+
+            folderListForMove.innerHTML = html;
+
+            // Add click handlers
+            folderListForMove.querySelectorAll('.folder-option').forEach(option => {
+                option.addEventListener('click', () => movePhotoToFolder(option.dataset.folder));
+            });
+
+            moveToFolderModal.classList.add('open');
+        }
+
+        function closeMoveToFolderModal() {
+            moveToFolderModal.classList.remove('open');
+            photoToMove = null;
+        }
+
+        async function movePhotoToFolder(folderName) {
+            if (!photoToMove) return;
+
+            try {
+                const response = await fetch(`/photos/${encodeURIComponent(photoToMove)}/folder`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder: folderName || null })
+                });
+
+                if (response.ok) {
+                    // Update local state
+                    const photo = photos.find(p => p.name === photoToMove);
+                    if (photo) {
+                        photo.folder = folderName || '';
+                        photo.element.dataset.folder = folderName || '';
+                    }
+
+                    closeMoveToFolderModal();
+                    renderFoldersList(); // Update counts
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Failed to move photo');
+                }
+            } catch (error) {
+                console.error('Error moving photo:', error);
+                alert('Failed to move photo');
+            }
+        }
+
+        function filterPhotosByTag(tag) {
+            if (!gallery) return;
+
+            const cards = gallery.querySelectorAll('.photo-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const cardTags = card.dataset.tags.toLowerCase();
+                const show = cardTags.includes(tag.toLowerCase());
+                card.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+
+            document.getElementById('photoCount').textContent = `${visibleCount} photo${visibleCount !== 1 ? 's' : ''}`;
+        }
+
+        function checkMobileView() {
+            if (window.innerWidth <= 1024) {
+                mobileMenuBtn.style.display = 'flex';
+            } else {
+                mobileMenuBtn.style.display = 'none';
+                sidebar.classList.remove('open');
+                sidebarOverlay.style.display = 'none';
+            }
+        }
+
+        // Sidebar Toggle
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // Click logo to expand when collapsed
+        document.querySelector('.sidebar-logo').addEventListener('click', () => {
+            if (sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
             }
         });
-    });
 
-    /* File Logic */
-    const fileDropArea = document.getElementById('file-drop-area');
-    const fileInput = document.getElementById('file-input');
-    const fileList = document.getElementById('file-list');
-    const dataTransfer = new DataTransfer(); // Holds all files
+        // Mobile Menu
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.add('open');
+        });
 
-    fileDropArea.addEventListener('dragover', (event) => {
-        event.preventDefault();
-        fileDropArea.classList.add('drag-over');
-    });
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+        });
 
-    fileDropArea.addEventListener('dragleave', () => {
-        fileDropArea.classList.remove('drag-over');
-    });
+        // View Mode Toggle
+        document.querySelectorAll('[data-view-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-view-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
 
-    fileDropArea.addEventListener('drop', (event) => {
-        event.preventDefault();
-        fileDropArea.classList.remove('drag-over');
-        const files = Array.from(event.dataTransfer.files);
-        handleFiles(files);
-    });
+                const mode = btn.dataset.viewMode;
+                if (gallery) {
+                    gallery.classList.remove('grid-view', 'masonry-view');
+                    gallery.classList.add(mode + '-view');
+                }
+                currentView = mode;
+            });
+        });
 
-    fileDropArea.addEventListener('click', () => fileInput.click());
+        // Upload Form Submit - Show loading overlay
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const fileCount = dataTransfer.files.length;
+            if (fileCount === 0) {
+                e.preventDefault();
+                return;
+            }
 
-    fileInput.addEventListener('change', () => {
-        const files = Array.from(fileInput.files);
-        handleFiles(files);
-    });
+            // Show loading overlay
+            const overlay = document.getElementById('uploadOverlay');
+            const title = document.getElementById('uploadOverlayTitle');
+            const message = document.getElementById('uploadOverlayMessage');
 
-    function handleFiles(files) {
-        files.forEach((file) => {
-            if (file.type === 'image/jpeg' || file.type === 'image/png') {
-                if (!Array.from(dataTransfer.files).includes(file)) { // Prevent duplicates
-                    const listItem = document.createElement('li');
-                    listItem.textContent = file.name;
+            title.textContent = `Uploading ${fileCount} photo${fileCount > 1 ? 's' : ''}...`;
+            message.textContent = 'Please wait while your photos are being uploaded and analyzed.';
+            overlay.classList.add('active');
 
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'X';
-                    deleteButton.classList.add('delete-btn');
-                    deleteButton.onclick = () => removeFile(file, listItem);
+            // Close the upload modal
+            uploadModal.classList.remove('open');
+        });
 
-                    listItem.appendChild(deleteButton);
-                    fileList.appendChild(listItem);
-                    dataTransfer.items.add(file);  // Add file to DataTransfer
+        // Upload Modal
+        uploadBtn.addEventListener('click', openUploadModal);
+
+        function openUploadModal() {
+            uploadModal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeUploadModal() {
+            uploadModal.classList.remove('open');
+            document.body.style.overflow = '';
+            filePreviewList.innerHTML = '';
+            fileInput.value = '';
+            uploadSubmitBtn.disabled = true;
+        }
+
+        // Drag and Drop Upload
+        const dataTransfer = new DataTransfer();
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            handleFiles(Array.from(e.dataTransfer.files));
+        });
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            handleFiles(Array.from(fileInput.files));
+        });
+
+        function handleFiles(files) {
+            files.forEach(file => {
+                if (file.type === 'image/jpeg' || file.type === 'image/png') {
+                    dataTransfer.items.add(file);
+                    addFilePreview(file);
+                }
+            });
+            fileInput.files = dataTransfer.files;
+            uploadSubmitBtn.disabled = dataTransfer.files.length === 0;
+        }
+
+        function addFilePreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.createElement('div');
+                preview.className = 'file-preview-item glass-light';
+                preview.innerHTML = `
+                    <img src="${e.target.result}" alt="${file.name}">
+                    <div class="file-preview-info">
+                        <span class="file-preview-name">${file.name}</span>
+                        <span class="file-preview-size">${formatFileSize(file.size)}</span>
+                    </div>
+                    <button type="button" class="file-preview-remove" onclick="removeFilePreview(this, '${file.name}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                filePreviewList.appendChild(preview);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeFilePreview(btn, fileName) {
+            const newDataTransfer = new DataTransfer();
+            Array.from(dataTransfer.files).forEach(file => {
+                if (file.name !== fileName) {
+                    newDataTransfer.items.add(file);
+                }
+            });
+            dataTransfer.items.clear();
+            Array.from(newDataTransfer.files).forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+            btn.closest('.file-preview-item').remove();
+            uploadSubmitBtn.disabled = dataTransfer.files.length === 0;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Dropdown helper function
+        function closeAllDropdowns() {
+            document.querySelectorAll('.photo-dropdown.open').forEach(d => {
+                d.classList.remove('open');
+                d.closest('.photo-card')?.classList.remove('dropdown-open');
+            });
+        }
+
+        // Photo Card Click - Open Lightbox
+        if (gallery) {
+            gallery.addEventListener('click', (e) => {
+                const card = e.target.closest('.photo-card');
+                if (!card) return;
+
+                // Check if clicking on action buttons, dropdown, or checkbox
+                if (e.target.closest('.photo-action-btn') || e.target.closest('.photo-checkbox') || e.target.closest('.photo-dropdown')) {
+                    return;
+                }
+
+                if (isSelectionMode) {
+                    togglePhotoSelection(card);
+                } else {
+                    const photoIndex = photos.findIndex(p => p.name === card.dataset.name);
+                    if (photoIndex !== -1) {
+                        openLightbox(photoIndex);
+                    }
+                }
+            });
+
+            // Favorite button click
+            gallery.addEventListener('click', (e) => {
+                const favoriteBtn = e.target.closest('.photo-action-btn.favorite');
+                if (favoriteBtn) {
+                    e.stopPropagation();
+                    favoriteBtn.classList.toggle('active');
+                    // TODO: Send favorite status to backend
+                }
+            });
+
+            // Checkbox click
+            gallery.addEventListener('click', (e) => {
+                const checkbox = e.target.closest('.photo-checkbox');
+                if (checkbox) {
+                    e.stopPropagation();
+                    togglePhotoSelection(checkbox.closest('.photo-card'));
+                }
+            });
+
+            // More button click - toggle dropdown
+            gallery.addEventListener('click', (e) => {
+                const moreBtn = e.target.closest('.more-btn');
+                if (moreBtn) {
+                    e.stopPropagation();
+                    const dropdown = moreBtn.nextElementSibling;
+                    const card = moreBtn.closest('.photo-card');
+                    const wasOpen = dropdown.classList.contains('open');
+
+                    // Close all dropdowns first
+                    closeAllDropdowns();
+
+                    if (!wasOpen) {
+                        // Use fixed positioning to escape overflow:hidden on photo-card
+                        const btnRect = moreBtn.getBoundingClientRect();
+                        dropdown.style.position = 'fixed';
+                        dropdown.style.top = (btnRect.bottom + 4) + 'px';
+                        dropdown.style.right = (window.innerWidth - btnRect.right) + 'px';
+                        dropdown.style.left = 'auto';
+                        dropdown.classList.add('open');
+                        card.classList.add('dropdown-open');
+                    }
+                }
+            });
+
+            // Dropdown item click
+            gallery.addEventListener('click', async (e) => {
+                const dropdownItem = e.target.closest('.photo-dropdown-item');
+                if (dropdownItem) {
+                    e.stopPropagation();
+                    const card = dropdownItem.closest('.photo-card');
+                    const action = dropdownItem.dataset.action;
+                    const photoName = card.dataset.name;
+                    const photo = photos.find(p => p.name === photoName);
+
+                    // Close dropdown
+                    dropdownItem.closest('.photo-dropdown').classList.remove('open');
+
+                    switch (action) {
+                        case 'download':
+                            if (photo) {
+                                fetch(photo.src)
+                                    .then(response => response.blob())
+                                    .then(blob => {
+                                        const url = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = photo.name;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                    });
+                            }
+                            break;
+                        case 'move':
+                            openMoveToFolderModal(photoName);
+                            break;
+                        case 'info':
+                            if (photo) {
+                                const photoIndex = photos.findIndex(p => p.name === photoName);
+                                openLightbox(photoIndex);
+                                setTimeout(() => lightbox.classList.add('show-info'), 100);
+                            }
+                            break;
+                        case 'delete':
+                            const confirmed = await showConfirm({
+                                title: 'Delete Photo?',
+                                message: `"${photoName}" will be permanently deleted. This action cannot be undone.`,
+                                icon: 'trash-alt',
+                                confirmText: 'Delete',
+                                confirmClass: 'btn-danger'
+                            });
+                            if (confirmed) {
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = `/delete/{{ uid }}/${photoName}`;
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
+                            break;
+                    }
+                }
+            });
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                // Don't close if clicking on more button or inside dropdown
+                if (e.target.closest('.more-btn') || e.target.closest('.photo-dropdown')) {
+                    return;
+                }
+                closeAllDropdowns();
+            });
+        }
+
+        // Lightbox Functions
+        function openLightbox(index) {
+            if (photos.length === 0) return;
+
+            currentPhotoIndex = index;
+            updateLightboxContent();
+            lightbox.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('open');
+            lightbox.classList.remove('show-info');
+            document.body.style.overflow = '';
+        }
+
+        function updateLightboxContent() {
+            const photo = photos[currentPhotoIndex];
+            if (!photo) return;
+
+            document.getElementById('lightboxImage').src = photo.src;
+            document.getElementById('lightboxCurrent').textContent = currentPhotoIndex + 1;
+            document.getElementById('lightboxCaption').textContent = photo.caption || '-';
+            document.getElementById('lightboxDescription').textContent = photo.description || '-';
+            document.getElementById('lightboxFilename').textContent = photo.name;
+            document.getElementById('lightboxDate').textContent = photo.uploadTime || '-';
+
+            // Update tags
+            const tagsContainer = document.getElementById('lightboxTags');
+            tagsContainer.innerHTML = photo.tags.map(tag =>
+                `<span class="lightbox-tag"><i class="fas fa-tag"></i> ${tag}</span>`
+            ).join('');
+
+            // Update navigation buttons
+            document.getElementById('lightboxPrev').disabled = currentPhotoIndex === 0;
+            document.getElementById('lightboxNext').disabled = currentPhotoIndex === photos.length - 1;
+        }
+
+        function navigateLightbox(direction) {
+            const newIndex = currentPhotoIndex + direction;
+            if (newIndex >= 0 && newIndex < photos.length) {
+                currentPhotoIndex = newIndex;
+                updateLightboxContent();
+            }
+        }
+
+        function toggleLightboxInfo() {
+            lightbox.classList.toggle('show-info');
+        }
+
+        // Lightbox Navigation
+        document.getElementById('lightboxPrev').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateLightbox(-1);
+        });
+        document.getElementById('lightboxNext').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateLightbox(1);
+        });
+        document.getElementById('lightboxInfo').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleLightboxInfo();
+        });
+
+        // Lightbox Favorite
+        document.getElementById('lightboxFavorite').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const btn = e.currentTarget;
+            btn.classList.toggle('active');
+            // TODO: Save favorite status to backend
+        });
+
+        // Lightbox Download
+        document.getElementById('lightboxDownload').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const photo = photos[currentPhotoIndex];
+            if (photo) {
+                // Use fetch to get the image and trigger download
+                fetch(photo.src)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = photo.name;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    })
+                    .catch(err => console.error('Download failed:', err));
+            }
+        });
+
+        // Lightbox Delete
+        document.getElementById('lightboxDelete').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const photo = photos[currentPhotoIndex];
+            if (!photo) return;
+
+            const confirmed = await showConfirm({
+                title: 'Delete Photo?',
+                message: `"${photo.name}" will be permanently deleted. This action cannot be undone.`,
+                icon: 'trash-alt',
+                confirmText: 'Delete',
+                confirmClass: 'btn-danger'
+            });
+
+            if (confirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/delete/{{ uid }}/${photo.name}`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('open')) return;
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    navigateLightbox(-1);
+                    break;
+                case 'ArrowRight':
+                    navigateLightbox(1);
+                    break;
+                case 'Escape':
+                    closeLightbox();
+                    break;
+                case 'i':
+                    toggleLightboxInfo();
+                    break;
+            }
+        });
+
+        // Close lightbox on backdrop click
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.classList.contains('lightbox-content')) {
+                closeLightbox();
+            }
+        });
+
+        // Selection Mode
+        selectModeBtn.addEventListener('click', toggleSelectionMode);
+
+        function toggleSelectionMode() {
+            isSelectionMode = !isSelectionMode;
+
+            if (gallery) {
+                gallery.classList.toggle('selection-mode', isSelectionMode);
+            }
+            selectModeBtn.classList.toggle('active', isSelectionMode);
+
+            if (!isSelectionMode) {
+                clearSelection();
+            }
+        }
+
+        function togglePhotoSelection(card) {
+            const id = card.dataset.id;
+
+            if (selectedPhotos.has(id)) {
+                selectedPhotos.delete(id);
+                card.classList.remove('selected');
+            } else {
+                selectedPhotos.add(id);
+                card.classList.add('selected');
+            }
+
+            updateSelectionUI();
+        }
+
+        function updateSelectionUI() {
+            const count = selectedPhotos.size;
+            selectedCountEl.textContent = count;
+
+            if (count > 0) {
+                bulkActionsBar.classList.add('visible');
+            } else {
+                bulkActionsBar.classList.remove('visible');
+            }
+        }
+
+        function clearSelection() {
+            selectedPhotos.clear();
+            document.querySelectorAll('.photo-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            updateSelectionUI();
+        }
+
+        document.getElementById('cancelSelection').addEventListener('click', () => {
+            toggleSelectionMode();
+        });
+
+        // Bulk Download
+        document.getElementById('bulkDownload').addEventListener('click', () => {
+            selectedPhotos.forEach(id => {
+                const photo = photos.find(p => p.id === id);
+                if (photo) {
+                    const link = document.createElement('a');
+                    link.href = photo.src;
+                    link.download = photo.name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            });
+        });
+
+        // Bulk Delete
+        document.getElementById('bulkDelete').addEventListener('click', async () => {
+            if (selectedPhotos.size === 0) return;
+
+            const count = selectedPhotos.size;
+            const confirmed = await showConfirm({
+                title: `Delete ${count} Photo${count > 1 ? 's' : ''}?`,
+                message: `${count} photo${count > 1 ? 's' : ''} will be permanently deleted. This action cannot be undone.`,
+                icon: 'trash-alt',
+                confirmText: 'Delete All',
+                confirmClass: 'btn-danger'
+            });
+
+            if (confirmed) {
+                const selectedNames = [];
+                selectedPhotos.forEach(id => {
+                    const photo = photos.find(p => p.id === id);
+                    if (photo) selectedNames.push(photo.name);
+                });
+
+                if (selectedNames.length > 0) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/delete/{{ uid }}/${selectedNames[0]}`;
+                    document.body.appendChild(form);
+                    form.submit();
                 }
             }
         });
-        fileInput.files = dataTransfer.files; // Update the file input
-    }
 
-    function removeFile(file, listItem) {
-        const index = Array.from(dataTransfer.files).indexOf(file);
-        if (index > -1) {
-            dataTransfer.items.remove(index);  // Remove file from DataTransfer
-            fileInput.files = dataTransfer.files;  // Update file input
-            fileList.removeChild(listItem);  // Remove list item
+        // Bulk Favorite (toggle)
+        document.getElementById('bulkFavorite').addEventListener('click', () => {
+            selectedPhotos.forEach(id => {
+                const photo = photos.find(p => p.id === id);
+                if (photo && photo.element) {
+                    const favoriteBtn = photo.element.querySelector('.photo-action-btn.favorite');
+                    if (favoriteBtn) {
+                        favoriteBtn.classList.toggle('active');
+                    }
+                }
+            });
+        });
+
+        // Search
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+
+            searchClear.classList.toggle('visible', query.length > 0);
+
+            if (gallery) {
+                const cards = gallery.querySelectorAll('.photo-card');
+                cards.forEach(card => {
+                    const name = card.dataset.name.toLowerCase();
+                    const caption = card.dataset.caption.toLowerCase();
+                    const tags = card.dataset.tags.toLowerCase();
+
+                    const matches = name.includes(query) || caption.includes(query) || tags.includes(query);
+                    card.style.display = matches ? '' : 'none';
+                });
+            }
+        });
+
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            searchClear.classList.remove('visible');
+
+            if (gallery) {
+                gallery.querySelectorAll('.photo-card').forEach(card => {
+                    card.style.display = '';
+                });
+            }
+        });
+
+        // Navigation Items - Filter photos based on view
+        let currentNavView = 'all';
+
+        document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                currentNavView = item.dataset.view;
+                document.getElementById('viewTitle').textContent = item.querySelector('.nav-item-text').textContent;
+
+                filterPhotosByView(currentNavView);
+            });
+        });
+
+        function filterPhotosByView(view) {
+            if (!gallery) return;
+
+            const cards = gallery.querySelectorAll('.photo-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                let show = true;
+
+                switch (view) {
+                    case 'all':
+                        show = true;
+                        break;
+                    case 'favorites':
+                        // Check if the favorite button is active
+                        const favBtn = card.querySelector('.photo-action-btn.favorite');
+                        show = favBtn && favBtn.classList.contains('active');
+                        break;
+                    case 'recent':
+                        // Show only photos from last 7 days (for now show all, sorted by time)
+                        show = true;
+                        break;
+                }
+
+                card.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+
+            // Update photo count
+            document.getElementById('photoCount').textContent = `${visibleCount} photo${visibleCount !== 1 ? 's' : ''}`;
+
+            // Show empty state if no photos match
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) {
+                emptyState.style.display = visibleCount === 0 ? 'flex' : 'none';
+            }
         }
-    }
-    
 
-</script>
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (uploadModal.classList.contains('open')) {
+                    closeUploadModal();
+                }
+            }
+        });
 
+        // Global drag and drop upload
+        const mainContent = document.querySelector('.main-content');
+        let dragCounter = 0;
+
+        document.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dragCounter++;
+            if (!lightbox.classList.contains('open') && !uploadModal.classList.contains('open')) {
+                mainContent.classList.add('drag-over-global');
+            }
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter === 0) {
+                mainContent.classList.remove('drag-over-global');
+            }
+        });
+
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragCounter = 0;
+            mainContent.classList.remove('drag-over-global');
+
+            // Don't handle if lightbox or modal is open
+            if (lightbox.classList.contains('open') || uploadModal.classList.contains('open')) {
+                return;
+            }
+
+            const files = Array.from(e.dataTransfer.files).filter(
+                file => file.type === 'image/jpeg' || file.type === 'image/png'
+            );
+
+            if (files.length > 0) {
+                // Open upload modal and add files
+                openUploadModal();
+                handleFiles(files);
+            }
+        });
+    </script>
+
+    <!-- Additional Styles for Modal and File Preview -->
+    <style>
+        /* Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            z-index: var(--z-modal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(var(--blur-md));
+        }
+
+        .modal-content {
+            position: relative;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            transform: scale(0.95);
+            transition: transform var(--transition-normal);
+        }
+
+        .modal.open .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-lg);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            color: var(--text-tertiary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .modal-close:hover {
+            background: var(--glass-bg-light);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            flex: 1;
+            padding: var(--space-lg);
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-sm);
+            padding: var(--space-lg);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* File Preview */
+        .file-preview-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-preview-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-sm);
+            border-radius: var(--radius-md);
+        }
+
+        .file-preview-item img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+        }
+
+        .file-preview-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-preview-name {
+            display: block;
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-preview-size {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+
+        .file-preview-remove {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            color: var(--text-tertiary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .file-preview-remove:hover {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        /* Alert */
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-md);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--space-lg);
+            animation: fadeInUp var(--transition-normal);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .alert-success {
+            background: rgba(48, 209, 88, 0.15);
+            border: 1px solid rgba(48, 209, 88, 0.3);
+            color: var(--accent-success);
+        }
+
+        .alert-error {
+            background: rgba(255, 69, 58, 0.15);
+            border: 1px solid rgba(255, 69, 58, 0.3);
+            color: var(--accent-danger);
+        }
+
+        .alert-close {
+            margin-left: auto;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            color: inherit;
+            opacity: 0.6;
+            cursor: pointer;
+            transition: opacity var(--transition-fast);
+        }
+
+        .alert-close:hover {
+            opacity: 1;
+        }
+
+        /* Global drag and drop overlay */
+        .main-content.drag-over-global {
+            position: relative;
+        }
+
+        .main-content.drag-over-global::after {
+            content: 'Drop photos to upload';
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 122, 255, 0.15);
+            border: 3px dashed rgba(0, 122, 255, 0.5);
+            border-radius: var(--radius-lg);
+            margin: var(--space-lg);
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--accent-primary);
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        /* Sidebar Tags & Empty State */
+        .sidebar-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: var(--space-xs) var(--space-sm);
+            background: var(--glass-bg-light);
+            border-radius: var(--radius-full);
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            margin: 2px;
+        }
+
+        .sidebar-tag:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .sidebar-tag-count {
+            font-size: var(--font-size-2xs);
+            opacity: 0.7;
+        }
+
+        .sidebar-empty {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+            padding: var(--space-sm);
+            font-style: italic;
+        }
+
+        .sidebar.collapsed .sidebar-empty {
+            display: none;
+        }
+
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            padding: var(--space-xs);
+        }
+
+        /* Photo Dropdown Menu */
+        .photo-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            min-width: 160px;
+            background: var(--glass-bg-dark);
+            backdrop-filter: blur(var(--blur-xl));
+            -webkit-backdrop-filter: blur(var(--blur-xl));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-xs);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity var(--transition-fast), visibility var(--transition-fast), transform var(--transition-fast);
+            z-index: 10000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .photo-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* Ensure photo-actions container allows dropdown overflow */
+        .photo-actions {
+            z-index: 150;
+            overflow: visible;
+        }
+
+        /* Keep actions visible when dropdown is open */
+        .photo-card.dropdown-open .photo-actions {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .photo-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: left;
+        }
+
+        .photo-dropdown-item:hover {
+            background: var(--glass-bg-light);
+            color: var(--text-primary);
+        }
+
+        .photo-dropdown-item.danger:hover {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .photo-dropdown-divider {
+            height: 1px;
+            background: var(--glass-border);
+            margin: var(--space-xs) 0;
+        }
+
+        /* Confirm Modal */
+        .confirm-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .confirm-modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .confirm-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(var(--blur-md));
+        }
+
+        .confirm-modal-content {
+            position: relative;
+            width: 90%;
+            max-width: 400px;
+            padding: var(--space-xl);
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform var(--transition-normal);
+        }
+
+        .confirm-modal.open .confirm-modal-content {
+            transform: scale(1);
+        }
+
+        .confirm-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--space-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 69, 58, 0.15);
+            border-radius: var(--radius-full);
+            color: var(--accent-danger);
+            font-size: var(--font-size-2xl);
+        }
+
+        .confirm-modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .confirm-modal-message {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xl);
+            line-height: var(--line-height-relaxed);
+        }
+
+        .confirm-modal-actions {
+            display: flex;
+            gap: var(--space-sm);
+            justify-content: center;
+        }
+
+        .btn-danger {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff453a;
+        }
+
+        /* Upload Overlay */
+        .upload-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(var(--blur-lg));
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+        }
+
+        .upload-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .upload-overlay-content {
+            text-align: center;
+            padding: var(--space-2xl);
+            max-width: 400px;
+        }
+
+        .upload-spinner {
+            margin-bottom: var(--space-lg);
+        }
+
+        .upload-spinner .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--glass-border);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .upload-overlay-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .upload-overlay-message {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-lg);
+        }
+
+        .upload-progress-bar {
+            height: 4px;
+            background: var(--glass-bg-light);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            margin-bottom: var(--space-sm);
+        }
+
+        .upload-progress-fill {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: var(--radius-full);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: progressPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes progressPulse {
+            0%, 100% { width: 20%; margin-left: 0; }
+            50% { width: 40%; margin-left: 60%; }
+        }
+
+        .upload-progress-text {
+            font-size: var(--font-size-xs);
+            color: var(--text-tertiary);
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            background: var(--glass-bg-light);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-md);
+            color: var(--text-primary);
+            transition: all var(--transition-fast);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background: var(--glass-bg);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-placeholder);
+        }
+
+        /* Folder List for Move Modal */
+        .folder-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xs);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .folder-option {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-md);
+            background: var(--glass-bg-light);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .folder-option:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .folder-option i {
+            font-size: var(--font-size-lg);
+            width: 24px;
+            text-align: center;
+        }
+
+        .folder-option span {
+            font-size: var(--font-size-md);
+        }
+    </style>
+</body>
 </html>

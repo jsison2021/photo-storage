@@ -1,0 +1,131 @@
+/* ============================================
+   Design Tokens - Apple Glass Dark Mode
+   ============================================ */
+
+:root {
+  /* ─────────────── Colors ─────────────── */
+
+  /* Background Colors */
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #141414;
+  --color-bg-tertiary: #1c1c1e;
+  --color-bg-elevated: #2c2c2e;
+
+  /* Glass Colors */
+  --glass-bg: rgba(30, 30, 32, 0.72);
+  --glass-bg-light: rgba(60, 60, 67, 0.36);
+  --glass-bg-dark: rgba(20, 20, 22, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-light: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+
+  /* Text Colors */
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.64);
+  --text-tertiary: rgba(255, 255, 255, 0.40);
+  --text-placeholder: rgba(255, 255, 255, 0.28);
+  --text-inverse: #0a0a0a;
+
+  /* Accent Colors */
+  --accent-primary: #0a84ff;
+  --accent-primary-hover: #409cff;
+  --accent-primary-active: #0066cc;
+  --accent-success: #30d158;
+  --accent-success-hover: #5de07a;
+  --accent-warning: #ffd60a;
+  --accent-danger: #ff453a;
+  --accent-danger-hover: #ff6961;
+
+  /* Semantic Colors */
+  --color-favorite: #ff375f;
+  --color-folder: #ffd60a;
+  --color-tag: #bf5af2;
+
+  /* ─────────────── Spacing ─────────────── */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+
+  /* ─────────────── Border Radius ─────────────── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* ─────────────── Typography ─────────────── */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+
+  --font-size-2xs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 28px;
+  --font-size-4xl: 34px;
+  --font-size-5xl: 48px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.02em;
+  --letter-spacing-caps: 0.08em;
+
+  /* ─────────────── Transitions ─────────────── */
+  --transition-fast: 120ms ease-out;
+  --transition-normal: 200ms ease-out;
+  --transition-slow: 300ms ease-out;
+  --transition-slower: 400ms ease-out;
+
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ─────────────── Layout ─────────────── */
+  --sidebar-width: 280px;
+  --sidebar-width-collapsed: 72px;
+  --header-height: 64px;
+  --content-max-width: 1600px;
+
+  /* ─────────────── Gallery ─────────────── */
+  --gallery-gap: 8px;
+  --gallery-item-min: 180px;
+  --gallery-item-max: 320px;
+
+  /* ─────────────── Z-Index Scale ─────────────── */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-sidebar: 300;
+  --z-overlay: 400;
+  --z-modal: 500;
+  --z-lightbox: 600;
+  --z-toast: 700;
+  --z-tooltip: 800;
+
+  /* ─────────────── Blur Values ─────────────── */
+  --blur-sm: 8px;
+  --blur-md: 16px;
+  --blur-lg: 24px;
+  --blur-xl: 40px;
+}

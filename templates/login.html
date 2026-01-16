@@ -1,73 +1,396 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login</title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Photo Storage</title>
 
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
 
-        <!-- Firebase App (required for all Firebase products) -->
-        <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-        <!-- Firebase Authentication (for user authentication) -->
-        <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-    
-        <script>
-            fetch('/firebase-config')
-                .then(response => response.json())
-                .then(firebaseConfig => {
-                    // Initialize Firebase
-                    firebase.initializeApp(firebaseConfig);
-                })
-            .catch(error => console.error("Error loading Firebase config:", error));
-    
-            // Handle user login and pass the token to Flask server
-            function login() {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                firebase.auth().signInWithPopup(provider)
-                    .then((result) => {
-                        result.user.getIdToken().then((token) => {
-                            // Send token to Flask server
-                            fetch('/login', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ token: token }) // Send token in the request body
-                            })
-                            .then(response => {
-                                if (response.ok) {
-                                    // Successfully logged in
-                                    window.location.href = '/'; // Redirect to index page
-                                } else {
-                                    // Handle login error
-                                    console.error('Login failed:', response);
-                                }
-                            })
-                            .catch(error => console.error('Error sending token to backend:', error));
-                        });
-                    })
-                    .catch(error => console.error('Error during sign-in:', error));
-            }
-        </script>
-    </head>
-<body class="body">
-    <div class = "header-container">
-        <h1 class="title">Photo Storage</h1>
-    </div>
-    <div class="login-container">
-        <div class = "login-button-container">
-            <button class="google-sign-in" onclick="login()">
-                <i class="fab fa-google google-icon"></i>
-                Sign In with Google
-            </button>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-card" id="loginCard">
+            <!-- Header -->
+            <div class="login-header">
+                <div class="login-logo">
+                    <i class="fas fa-images"></i>
+                </div>
+                <h1 class="login-title" id="formTitle">Sign In</h1>
+                <p class="login-subtitle">Welcome to Photo Storage</p>
+            </div>
+
+            <!-- Error Message -->
+            <div class="form-error" id="formError">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorMessage">An error occurred. Please try again.</span>
+            </div>
+
+            <!-- Success Message -->
+            <div class="login-success" id="loginSuccess">
+                <div class="login-success-icon">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h2 class="login-success-title">Welcome!</h2>
+                <p class="login-success-text">Redirecting to your photos...</p>
+            </div>
+
+            <!-- Login Form -->
+            <form class="login-form" id="loginForm" onsubmit="handleEmailLogin(event)">
+                <!-- Email Field -->
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        class="form-input"
+                        placeholder="you@example.com"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <!-- Password Field -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="password-input-wrapper">
+                        <input
+                            type="password"
+                            id="password"
+                            class="form-input"
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                        <button type="button" class="password-toggle" onclick="togglePassword()">
+                            <i class="fas fa-eye" id="passwordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Confirm Password (Sign Up Only) -->
+                <div class="signup-fields" id="signupFields">
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm Password</label>
+                        <div class="password-input-wrapper">
+                            <input
+                                type="password"
+                                id="confirmPassword"
+                                class="form-input"
+                                placeholder="Confirm your password"
+                                autocomplete="new-password"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Links -->
+                <div class="form-links">
+                    <a href="#" class="form-link" onclick="toggleForgotPassword(event)">Forgot password?</a>
+                    <a href="#" class="form-link" id="toggleMode" onclick="toggleSignupMode(event)">Create account</a>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="login-btn login-btn-primary" id="submitBtn">
+                    <span id="submitText">Sign In</span>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="login-divider">or continue with</div>
+
+            <!-- Social Login -->
+            <div class="social-login">
+                <button type="button" class="social-btn social-btn-google" onclick="loginWithGoogle()">
+                    <svg class="social-btn-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                </button>
+            </div>
+
+            <!-- Footer -->
+            <div class="login-footer">
+                <span id="footerText">Don't have an account?</span>
+                <a href="#" onclick="toggleSignupMode(event)" id="footerLink">Sign up</a>
+            </div>
         </div>
     </div>
-</div>
 
-    
-    
+    <script>
+        // State
+        let isSignupMode = false;
+        let firebaseInitialized = false;
+
+        // Initialize Firebase
+        fetch('/firebase-config')
+            .then(response => response.json())
+            .then(firebaseConfig => {
+                firebase.initializeApp(firebaseConfig);
+                firebaseInitialized = true;
+            })
+            .catch(error => {
+                console.error("Error loading Firebase config:", error);
+                showError("Failed to initialize authentication. Please refresh the page.");
+            });
+
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const icon = document.getElementById('passwordIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Toggle between sign in and sign up modes
+        function toggleSignupMode(event) {
+            event.preventDefault();
+            isSignupMode = !isSignupMode;
+
+            const card = document.getElementById('loginCard');
+            const title = document.getElementById('formTitle');
+            const submitText = document.getElementById('submitText');
+            const toggleLink = document.getElementById('toggleMode');
+            const signupFields = document.getElementById('signupFields');
+            const footerText = document.getElementById('footerText');
+            const footerLink = document.getElementById('footerLink');
+            const confirmPassword = document.getElementById('confirmPassword');
+
+            hideError();
+
+            if (isSignupMode) {
+                card.classList.add('signup-mode');
+                title.textContent = 'Create Account';
+                submitText.textContent = 'Sign Up';
+                toggleLink.textContent = 'Sign in instead';
+                signupFields.style.display = 'flex';
+                footerText.textContent = 'Already have an account?';
+                footerLink.textContent = 'Sign in';
+                confirmPassword.required = true;
+            } else {
+                card.classList.remove('signup-mode');
+                title.textContent = 'Sign In';
+                submitText.textContent = 'Sign In';
+                toggleLink.textContent = 'Create account';
+                signupFields.style.display = 'none';
+                footerText.textContent = "Don't have an account?";
+                footerLink.textContent = 'Sign up';
+                confirmPassword.required = false;
+            }
+        }
+
+        // Handle email/password login/signup
+        function handleEmailLogin(event) {
+            event.preventDefault();
+
+            if (!firebaseInitialized) {
+                showError("Authentication not ready. Please wait and try again.");
+                return;
+            }
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validation
+            if (!email || !password) {
+                showError("Please fill in all fields.");
+                return;
+            }
+
+            if (isSignupMode) {
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                if (password !== confirmPassword) {
+                    showError("Passwords do not match.");
+                    return;
+                }
+                if (password.length < 6) {
+                    showError("Password must be at least 6 characters.");
+                    return;
+                }
+            }
+
+            // Show loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            hideError();
+
+            if (isSignupMode) {
+                // Create new account
+                firebase.auth().createUserWithEmailAndPassword(email, password)
+                    .then(handleAuthSuccess)
+                    .catch(handleAuthError)
+                    .finally(() => {
+                        submitBtn.classList.remove('loading');
+                        submitBtn.disabled = false;
+                    });
+            } else {
+                // Sign in existing user
+                firebase.auth().signInWithEmailAndPassword(email, password)
+                    .then(handleAuthSuccess)
+                    .catch(handleAuthError)
+                    .finally(() => {
+                        submitBtn.classList.remove('loading');
+                        submitBtn.disabled = false;
+                    });
+            }
+        }
+
+        // Handle Google login
+        function loginWithGoogle() {
+            if (!firebaseInitialized) {
+                showError("Authentication not ready. Please wait and try again.");
+                return;
+            }
+
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+                .then(handleAuthSuccess)
+                .catch(handleAuthError);
+        }
+
+        // Handle successful authentication
+        function handleAuthSuccess(result) {
+            result.user.getIdToken().then((token) => {
+                // Send token to Flask server
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: token })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        showSuccess();
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    } else {
+                        showError('Login failed. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending token to backend:', error);
+                    showError('Connection error. Please try again.');
+                });
+            });
+        }
+
+        // Handle authentication errors
+        function handleAuthError(error) {
+            console.error('Authentication error:', error);
+
+            let message = 'An error occurred. Please try again.';
+
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    message = 'Invalid email address.';
+                    break;
+                case 'auth/user-disabled':
+                    message = 'This account has been disabled.';
+                    break;
+                case 'auth/user-not-found':
+                    message = 'No account found with this email.';
+                    break;
+                case 'auth/wrong-password':
+                    message = 'Incorrect password.';
+                    break;
+                case 'auth/email-already-in-use':
+                    message = 'An account already exists with this email.';
+                    break;
+                case 'auth/weak-password':
+                    message = 'Password is too weak. Use at least 6 characters.';
+                    break;
+                case 'auth/popup-closed-by-user':
+                    message = 'Sign-in popup was closed.';
+                    break;
+                case 'auth/cancelled-popup-request':
+                    return; // Ignore this error
+                case 'auth/network-request-failed':
+                    message = 'Network error. Check your connection.';
+                    break;
+            }
+
+            showError(message);
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('formError');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorDiv.classList.add('visible');
+        }
+
+        // Hide error message
+        function hideError() {
+            const errorDiv = document.getElementById('formError');
+            errorDiv.classList.remove('visible');
+        }
+
+        // Show success state
+        function showSuccess() {
+            const form = document.getElementById('loginForm');
+            const success = document.getElementById('loginSuccess');
+            const divider = document.querySelector('.login-divider');
+            const social = document.querySelector('.social-login');
+            const footer = document.querySelector('.login-footer');
+
+            form.style.display = 'none';
+            divider.style.display = 'none';
+            social.style.display = 'none';
+            footer.style.display = 'none';
+            success.classList.add('visible');
+        }
+
+        // Handle forgot password
+        function toggleForgotPassword(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+
+            if (!email) {
+                showError("Please enter your email address first.");
+                return;
+            }
+
+            if (!firebaseInitialized) {
+                showError("Authentication not ready. Please wait and try again.");
+                return;
+            }
+
+            firebase.auth().sendPasswordResetEmail(email)
+                .then(() => {
+                    hideError();
+                    alert('Password reset email sent! Check your inbox.');
+                })
+                .catch((error) => {
+                    if (error.code === 'auth/user-not-found') {
+                        showError("No account found with this email.");
+                    } else {
+                        showError("Failed to send reset email. Please try again.");
+                    }
+                });
+        }
+    </script>
 </body>
 </html>

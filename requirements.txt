@@ -5,5 +5,7 @@ google-cloud-datastore==2.20.1
 google-generativeai
 python-dotenv==1.0.0
 firebase-admin==6.0.0
+serverless-wsgi==3.0.0
+gunicorn==21.2.0
 
 debugpy # Required for debugging.

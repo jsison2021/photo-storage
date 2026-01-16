@@ -1,0 +1,28 @@
+/* ============================================
+   Main CSS - Import Aggregator
+   Photo Storage - Apple Glass Dark Mode
+   ============================================ */
+
+/* Design Tokens & Variables */
+@import 'variables.css';
+
+/* Base Styles & Reset */
+@import 'base.css';
+
+/* Frosted Glass Effects */
+@import 'glass.css';
+
+/* UI Components */
+@import 'components.css';
+
+/* App Layout Structure */
+@import 'layout.css';
+
+/* Photo Gallery */
+@import 'gallery.css';
+
+/* Lightbox Modal */
+@import 'lightbox.css';
+
+/* Login Page */
+@import 'login.css';
